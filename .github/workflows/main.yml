@@ -16,8 +16,9 @@ jobs:
 
       - name: Build APK
         run: |
-          buildozer init
-          buildozer -v android debug
+          # Запускаем от пользователя 'user' (не root)
+          su user -c "buildozer init"
+          su user -c "buildozer -v android debug"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
