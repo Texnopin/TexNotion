@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ page.title }}</title>
+  <style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: #e5e5e5;
+    background: #111111;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .sidebar {
+  width: 260px;
+  background: #141414;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  border-right: 1px solid #202020;
+  /* убираем overflow-y отсюда */
+}
+
+/* Верхняя закреплённая часть */
+.sidebar-header {
+  flex-shrink: 0;          /* не сжимается */
+  padding: 10px 8px 0 8px;
+  background: #141414;     /* чтобы не просвечивал скролл */
+}
+
+.sidebar-scrollable {
+  flex: 1;                 /* занимает всё свободное место */
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 10px 8px 0 8px; /* верхние и боковые отступы, снизу 0 */
+}
+
+    /* Скрываем полосу прокрутки для Chrome/Safari/Opera */
+.sidebar-scrollable::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar-footer {
+  padding: 12px 8px;
+  font-size: 11px;
+  color: #777777;
+  border-top: 1px solid #202020;
+  background: #141414;   /* чтобы не просвечивал контент под ним */
+  flex-shrink: 0;        /* не сжимается */
+}
+
+
+
+/* Блок рисования (заглушка) */
+.page-block.drawing {
+  background: #0a0a0a;
+  border-radius: 8px;
+  border: 1px solid #2b2b2b;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.page-block.drawing:hover {
+  background: #1a1a1a;
+}
+.drawing-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  border-radius: 8px;
+  border: 1px solid #2b2b2b;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+}
+.drawing-preview svg {
+  width: 48px;
+  height: 48px;
+  fill: #8b8b8b;
+  margin-bottom: 8px;
+}
+
+.drawing-preview:hover {
+  background: #1a1a1a;
+}
+
+.drawing-preview canvas {
+  display: block;
+  width: 100%;  /* Это гарантирует, что canvas растягивается по ширине */
+  height: 100%; /* Это гарантирует правильное масштабирование */
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Стили для тулбара рисования */
+.drawing-toolbar button {
+  transition: background 0.2s ease;
+}
+.drawing-toolbar button:hover {
+  filter: brightness(1.2);
+  cursor: pointer;
+}
+.drawing-color-preview {
+  transition: transform 0.1s ease;
+}
+.drawing-color-preview:hover {
+  transform: scale(1.05);
+}
+
+.drawing-editor {
+  box-sizing: border-box;
+}
+.drawing-editor * {
+  box-sizing: border-box;
+}
+
+  .workspace {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+  }
+
+  .workspace:hover { background: #202020; }
+
+  .workspace-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: #111111;
+    border: 1px solid #2b2b2b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .workspace-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .workspace-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .workspace-meta {
+    font-size: 11px;
+    color: #8b8b8b;
+  }
+
+  .workspace-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .workspace-btn {
+    user-select: none;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: #e5e5e5;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .workspace-btn:hover { background: #202020; }
+  .workspace-btn.chevron { font-size: 12px; }
+
+  .search-container {
+  padding: 8px 6px;
+  position: relative;
+}
+#search-input {
+  width: 100%;
+  background: #1e1e1e;
+  border: 1px solid #2b2b2b;
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: #e5e5e5;
+  font-size: 13px;
+  outline: none;
+}
+#search-input:focus {
+  border-color: #3b82f6;
+}
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 6px;
+  right: 6px;
+  background: #181818;
+  border: 1px solid #2b2b2b;
+  border-radius: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+}
+.search-results.show {
+  display: block;
+}
+.search-result-item {
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid #252525;
+}
+.search-result-item:hover {
+  background: #202020;
+}
+.search-result-title {
+  font-weight: 500;
+}
+.search-result-score {
+  float: right;
+  color: #777;
+  font-size: 11px;
+}
+
+  .sidebar-section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b8b8b;
+    padding: 8px 6px 4px;
+  }
+
+  .nav-list {
+  list-style: none;
+  padding: 2px 0;
+}
+  .nav-item { border-radius: 6px; margin: 1px 0; }
+
+  .nav-item-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    font-size: 13px;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .nav-link:hover { background: #202020; }
+
+  .nav-icon { width: 18px; text-align: center; opacity: 0.9; }
+
+  .nav-item-children { margin-left: 16px; }
+
+  .nav-item-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .nav-plus,
+  .nav-delete {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .nav-plus { color: #777; }
+  .nav-delete { color: #a55; }
+
+  .nav-item:hover .nav-plus,
+  .nav-item:hover .nav-delete {
+    opacity: 1;
+  }
+
+  .nav-page-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: #111111;
+    border: 1px solid #2b2b2b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .nav-page-emoji {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .nav-link span:last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Divider-блок */
+  .page-block.divider {
+    padding: 4px 2px;
+  }
+  .page-block.divider .page-block-text {
+    padding: 4px 0;
+  }
+  .page-divider-line {
+    height: 1px;
+    width: 100%;
+    background: #2b2b2b;
+  }
+
+  .page-block-text[contenteditable] {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+  }
+  .page-block-text[contenteditable]:focus {
+    outline: none !important;
+  }
+  .page-block-text,
+  [contenteditable="true"],
+  .page-block-body,
+  .columns-column-inner,
+  .columns-column * {
+    cursor: text !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  .page-block-text-rendered {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  .page-block-body {
+    position: relative;
+  }
+  .columns-resizer {
+    cursor: col-resize !important;
+  }
+  .columns-wrapper * {
+    cursor: inherit;
+  }
+  .columns-resizer:hover {
+    cursor: col-resize !important;
+  }
+  .columns-resizer.active {
+    cursor: col-resize !important;
+  }
+  .columns-vertical-divider {
+    width: 1px;
+    background: #2b2b2b;
+    align-self: stretch;
+  }
+  .columns-vertical-divider-block {
+    width: 1px;
+    background: #2b2b2b;
+    margin: 0 6px;
+  }
+  .columns-wrapper {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+  .columns-column {
+    flex: 1 1 140px;
+    min-width: 140px;
+  }
+  .columns-resizer {
+    width: 12px;
+    flex-shrink: 0;
+    cursor: col-resize;
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+  .columns-resizer::before {
+    content: '';
+    width: 2px;
+    height: 100%;
+    background: transparent;
+    border-radius: 1px;
+    transition: background 0.15s ease;
+  }
+  .columns-resizer:hover::before,
+  .columns-resizer.active::before {
+    background: #2b2b2b !important;
+  }
+
+  .page-block {
+    position: relative;
+    border-radius: 6px;
+    margin: 2px 0;
+    padding: 3px 2px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .page-block-left,
+  .page-block-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+  }
+  .page-block-body {
+    flex: 1 1 auto;
+    padding: 2px 4px;
+  }
+  .page-block:hover .page-block-body {
+    background: #181818;
+    border-radius: 6px;
+  }
+  .page-block-text-rendered a {
+    color: #7fb3ff;
+    text-decoration: underline;
+  }
+  .page-block-text-rendered a:hover {
+    color: #a5c9ff;
+  }
+  .page-block-text-rendered a:visited,
+  .page-block-text-rendered a:active {
+    color: #7fb3ff;
+  }
+  .page-block-text {
+    font-size: 14px;
+    line-height: 1.5;
+    outline: none;
+    min-height: 20px;
+    white-space: pre-wrap;
+  }
+  .block-plus,
+  .block-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    padding: 0;
+    cursor: pointer;
+    color: #777;
+    opacity: 0;
+    transition: opacity 0.15s ease, background 0.15s ease;
+  }
+  .block-delete {
+    color: #a55;
+  }
+  .page-block:hover .block-plus,
+  .page-block:hover .block-delete {
+    opacity: 1;
+  }
+  .block-plus:hover,
+  .block-delete:hover {
+    background: #202020;
+  }
+  .block-menu {
+    position: absolute;
+    left: 32px;
+    top: 2px;
+    background: #181818;
+    border: 1px solid #303030;
+    border-radius: 6px;
+    padding: 4px 0;
+    display: none;
+    flex-direction: column;
+    min-width: 160px;
+    z-index: 100;
+  }
+  .block-menu button {
+    background: none;
+    border: none;
+    color: #e5e5e5;
+    font-size: 13px;
+    text-align: left;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  .block-menu button:hover { background: #262626; }
+  .page-block.heading1 .page-block-text {
+    font-size: 26px;
+    font-weight: 700;
+  }
+  .page-block.heading2 .page-block-text {
+    font-size: 22px;
+    font-weight: 650;
+  }
+  .page-block.heading3 .page-block-text {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .page-block.heading .page-block-text {
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .page-block.todo .page-block-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .page-block.todo input[type="checkbox"] {
+    margin-right: 6px;
+    margin-top: 2px;
+  }
+  .page-block.page-link .page-block-text {
+    color: #7fb3ff;
+  }
+  [contenteditable] {
+    outline: 0px solid transparent;
+  }
+  .page-block.columns {
+    padding: 6px 2px;
+  }
+  .columns-wrapper {
+    display: flex;
+    gap: 12px;
+    position: relative;
+  }
+  .columns-resizer {
+    position: relative;
+    width: 12px;
+    cursor: col-resize;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+  .columns-resizer::before {
+    content: "";
+    width: 2px;
+    background: transparent;
+    border-radius: 1px;
+    transition: background 0.15s ease;
+  }
+  .columns-resizer:hover::before,
+  .columns-resizer.active::before {
+    background: #2b2b2b;
+  }
+  .columns-column {
+    flex: 1 1 0;
+    min-width: 140px;
+  }
+  .columns-column-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .add-page {
+    margin-top: 6px;
+    padding: 4px 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #8b8b8b;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .add-page:hover { background: #202020; color: #ffffff; }
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 6px;
+    font-size: 11px;
+    color: #777777;
+    border-top: 1px solid #202020;
+  }
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #111111;
+  }
+  .page-header {
+    height: auto;
+    padding: 0;
+    background: #111111;
+    border-bottom: 1px solid #202020;
+  }
+  .page-header-inner {
+    display: flex;
+    flex-direction: column;
+  }
+  .page-header-color-bar {
+    position: relative;
+    width: 100%;
+    height: 120px;
+    background: #252525;
+  }
+  .page-header-color-button {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #ffffff55;
+    background: #3b82f6;
+    cursor: pointer;
+  }
+  .page-header-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 4px 16px;
+  }
+  .page-header-button {
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .page-header-button:hover { background: #202020; }
+  .page-scroll {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* IE/Edge */
+}
+.page-scroll::-webkit-scrollbar {
+  display: none;
+}
+  .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 72px 80px;
+  }
+  .page-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .page-title-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #181818;
+    border: 1px solid #2b2b2b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .page-title-emoji {
+    font-size: 24px;
+    line-height: 1;
+  }
+  .page-title {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    outline: none;
+  }
+  .page-title[contenteditable="true"]:empty::before {
+    content: "Untitled";
+    color: #555;
+  }
+  .page-subtitle {
+    font-size: 14px;
+    color: #9b9b9b;
+  }
+  @media (max-width: 900px) {
+    .page { padding: 24px 16px 40px; }
+  }
+  .page-picker {
+    position: fixed;
+    z-index: 9999;
+    background: #181818;
+    border: 1px solid #303030;
+    border-radius: 8px;
+    width: 280px;
+    max-height: 320px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .page-picker-header {
+    padding: 6px 8px;
+    border-bottom: 1px solid #303030;
+  }
+  .page-picker-header input {
+    width: 100%;
+    padding: 4px 6px;
+    border-radius: 4px;
+    border: 1px solid #303030;
+    background: #111111;
+    color: #e5e5e5;
+    font-size: 13px;
+  }
+  .page-picker-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+  }
+  .page-picker-item {
+    padding: 4px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .page-picker-item:hover {
+    background: #262626;
+  }
+
+
+  /* Шеврон */
+.nav-chevron {
+  background: transparent;
+  border: none;
+  color: #8b8b8b;
+  font-size: 12px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+.nav-chevron:hover {
+  color: #e5e5e5;
+}
+.nav-chevron-placeholder {
+  width: 20px;
+  flex-shrink: 0;
+}
+
+/* Скрытие/показ дочерних элементов */
+.nav-item-children {
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, opacity 0.2s ease;
+  max-height: 1000px; /* достаточно большое значение */
+  opacity: 1;
+}
+.nav-item-children.collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none; /* чтобы скрытые ссылки не получали клики */
+}
+
+/* Поворот шеврона при раскрытой папке */
+.nav-item.expanded > .nav-item-row .nav-chevron {
+  transform: rotate(0deg);
+}
+.nav-item:not(.expanded) > .nav-item-row .nav-chevron {
+  transform: rotate(-90deg);
+}
+
+  </style>
+  <script src="{{ url_for('static', filename='js/fabric.min.js') }}"></script>
+</head>
+<body data-page-id="{{ page.id }}">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+        <div class="workspace">
+      <div class="workspace-icon">T</div>
+      <div class="workspace-info">
+        <div class="workspace-name">Texnopin's Notion</div>
+        <div class="workspace-meta"></div>
+      </div>
+      <div class="workspace-actions">
+        <button class="workspace-btn" title="New page" id="btn-new-page">＋</button>
+        <button class="workspace-btn chevron" title="More options">⌄</button>
+      </div>
+    </div>
+    <div class="search-container">
+  <input type="text" id="search-input" placeholder="🔍 Поиск по заметкам..." autocomplete="off">
+  <div id="search-results" class="search-results"></div>
+</div>
+
+    <div class="sidebar-section-title">Your pages</div>
+    </div>
+<div class="sidebar-scrollable">
+    <ul class="nav-list" id="sidebar-pages">
+      {% macro render_nodes(nodes) %}
+{% for node in nodes %}
+<li class="nav-item" data-page-id="{{ node.id }}">
+  <div class="nav-item-row">
+    {% if node.children %}
+      <button class="nav-chevron" data-toggle="children" aria-label="Toggle children">▼</button>
+    {% else %}
+      <span class="nav-chevron-placeholder"></span>
+    {% endif %}
+    <a class="nav-link" href="/page/{{ node.id }}">
+      <span class="nav-page-icon">
+        {% if node.icon %}
+          <span class="nav-page-emoji">{{ node.icon }}</span>
+        {% else %}
+          <span class="nav-page-emoji">📄</span>
+        {% endif %}
+      </span>
+      <span class="sidebar-page-title">{{ node.title }}</span>
+    </a>
+    <div class="nav-item-actions">
+  <div class="nav-plus" title="Add subpage" data-parent-id="{{ node.id }}">
+    <svg aria-hidden="true" role="graphics-symbol" viewBox="0 0 16 16" class="plusSmall"
+         style="width: 16px; height: 16px; display: block; fill: currentColor; flex-shrink: 0;">
+      <path d="M8 2.74a.66.66 0 0 1 .66.66v3.94h3.94a.66.66 0 0 1 0 1.32H8.66v3.94a.66.66 0 0 1-1.32 0V8.66H3.4a.66.66 0 0 1 0-1.32h3.94V3.4A.66.66 0 0 1 8 2.74"></path>
+    </svg>
+  </div>
+  <div class="nav-delete" title="Delete page" data-page-id="{{ node.id }}">
+    <svg aria-hidden="true" role="graphics-symbol"
+         viewBox="0 0 20 20"
+         class="trash"
+         style="width: 20px; height: 20px; display: block; fill: currentColor; flex-shrink: 0;">
+      <path d="M8.806 8.505a.55.55 0 0 0-1.1 0v5.979a.55.55 0 1 0 1.1 0zm3.488 0a.55.55 0 0 0-1.1 0v5.979a.55.55 0 1 0 1.1 0z"></path>
+      <path d="M6.386 3.925v1.464H3.523a.625.625 0 1 0 0 1.25h.897l.393 8.646A2.425 2.425 0 0 0 7.236 17.6h5.528a2.425 2.425 0 0 0 2.422-2.315l.393-8.646h.898a.625.625 0 1 0 0-1.25h-2.863V3.925c0-.842-.683-1.525-1.525-1.525H7.91c-.842 0-1.524.683-1.524 1.525M7.91 3.65h4.18c.15 0 .274.123.274.275v1.464H7.636V3.925c0-.152.123-.275.274-.275m-.9 2.99h7.318l-.39 8.588a1.175 1.175 0 0 1-1.174 1.122H7.236a1.175 1.175 0 0 1-1.174-1.122l-.39-8.589z"></path>
+    </svg>
+  </div>
+</div>
+  </div>
+  {% if node.children %}
+    <ul class="nav-list nav-item-children" data-children="true">
+      {{ render_nodes(node.children) }}
+    </ul>
+  {% endif %}
+</li>
+{% endfor %}
+{% endmacro %}
+      {{ render_nodes(tree) }}
+    </ul>
+
+    <div class="add-page" id="add-page-bottom">
+      <span>＋</span>
+      <span>New page</span>
+    </div>
+</div>
+    <div class="sidebar-footer">
+      Created by Texnopin
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="page-header">
+      <div class="page-header-inner">
+        <div class="page-header-color-bar"
+             id="page-header-color-bar"
+             style="background: {{ page.cover_color or '#252525' }}">
+          <button class="page-header-color-button"
+                  id="page-header-color-button"
+                  title="Change cover color"></button>
+        </div>
+        <div class="page-header-actions">
+          <div class="page-header-button">•••</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-scroll">
+      <main class="page">
+        <div class="page-title-row">
+          <div class="page-title-icon" id="page-title-icon">
+            {% if page.icon %}
+              <span class="page-title-emoji">{{ page.icon }}</span>
+            {% else %}
+              <span class="page-title-emoji">📄</span>
+            {% endif %}
+          </div>
+          <h1 class="page-title" id="page-title" contenteditable="true">{{ page.title }}</h1>
+        </div>
+        <div id="blocks-container"></div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Кастомное модальное окно подтверждения -->
+<div id="customConfirm" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;">
+  <div style="background: #181818; border: 1px solid #303030; border-radius: 8px; padding: 20px; min-width: 280px; text-align: center;">
+    <p id="confirmMessage" style="margin-bottom: 20px;">Удалить страницу?</p>
+    <button id="confirmOk" style="background: #e24c4c; border: none; color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; margin-right: 10px;">Удалить</button>
+    <button id="confirmCancel" style="background: #2c2c2c; border: none; color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer;">Отмена</button>
+  </div>
+</div>
+
+
+
+  <script src="{{ url_for('static', filename='editor.js') }}"></script>
+</body>
+</html>
