@@ -14,7 +14,8 @@ jobs:
 
       - name: Build APK with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
+        env:
+          USER: root
         with:
           command: buildozer android debug
           workdir: .
@@ -24,4 +25,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: my-notion-app
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: bin/*.apk
