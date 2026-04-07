@@ -15,7 +15,7 @@ bootstrap = webview
 # Android config
 android.api = 30
 android.minapi = 21
-android.ndk = 23b
+android.ndk = 25b
 android.build_tools = 30.0.3
 
 android.permissions = INTERNET
