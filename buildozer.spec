@@ -12,10 +12,12 @@ requirements = python3, flask, rank-bm25, cython
 
 bootstrap = webview
 
-android.permissions = INTERNET
+# Android config
 android.api = 30
 android.minapi = 21
 android.ndk = 23b
-android.sdk = 30
+android.build_tools = 30.0.3
+
+android.permissions = INTERNET
 
 log_level = 2
