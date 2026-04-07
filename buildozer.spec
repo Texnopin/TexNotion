@@ -12,7 +12,6 @@ requirements = python3, flask, rank-bm25, cython
 
 bootstrap = webview
 
-# Android config
 android.api = 30
 android.minapi = 21
 android.ndk = 25b
