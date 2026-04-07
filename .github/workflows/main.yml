@@ -33,25 +33,32 @@ jobs:
         sudo apt update
         sudo apt install -y git zip unzip python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev wget
 
-    - name: Set up Android SDK in the expected location
+    - name: Set up Android SDK in the correct structure (cmdline-tools/latest)
       run: |
-        mkdir -p ~/.buildozer/android/platform/android-sdk
+        # Создаём папку SDK в стандартном месте Buildozer
+        mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools
+        
+        # Скачиваем commandlinetools
+        cd ~/.buildozer/android/platform/android-sdk
         wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
         unzip commandlinetools-linux-11076708_latest.zip -d cmdline-tools
-        
-        cd ~/.buildozer/android/platform/android-sdk
-        mkdir -p tools/bin
-        cp -r $GITHUB_WORKSPACE/cmdline-tools/cmdline-tools/* tools/
+        mv cmdline-tools/cmdline-tools cmdline-tools/latest
+        rm -f commandlinetools-linux-11076708_latest.zip
         
         export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
         echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         
-        chmod +x tools/bin/sdkmanager
-        chmod +x tools/bin/avdmanager
+        # Путь к sdkmanager
+        SDKMANAGER=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager
+        chmod +x $SDKMANAGER
         
-        yes | tools/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-        tools/bin/sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+        # Принимаем лицензии
+        yes | $SDKMANAGER --licenses > /dev/null 2>&1 || true
         
+        # Устанавливаем компоненты
+        $SDKMANAGER "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+        
+        # Добавляем в PATH
         echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
         echo "$ANDROID_SDK_ROOT/build-tools/30.0.3" >> $GITHUB_PATH
         
